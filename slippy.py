@@ -2,25 +2,11 @@
 
 import re
 import sys
-import click
 import argparse
 from io import StringIO
 
+from Cmd import *
 import utils
-
-def get_addr(command):
-    def calculate_addr(expr):
-        return expr if expr =='$' else(expr[1:-1] if re.match(r'/(.*)/', expr) else int(expr))
-            
-    if ',' in command:
-        (start, end) = command.split(',')
-        start = calculate_addr(start)
-        end = calculate_addr(end)
-    else:
-        start = calculate_addr(command)
-        end = start
-    return (start, end)
-
 
 def process_command(command, noprint, lines=None):
     res = list()
@@ -94,7 +80,7 @@ def parse_argument():
 
 def preprocess_commands(commands):
     cmds = list()
-    commands = commands.strip()
+    commands = commands.replace(' ', '')
     lines = commands.split('\n')
     for line in lines:
         while len(line) > 0:
@@ -103,14 +89,77 @@ def preprocess_commands(commands):
                 cmds.append(cmd)
             line = line[i:]
 
-
+    for cmd in cmds:
+        print(str(cmd))
     return cmds
 
 def parse_cmd(command):
-    i = 0
-    
-    return i, None
+    addr1, addr2, addr_len = get_addr(command)
+    op = command[addr_len]
+    command = command[addr_len:]
+    detail, detail_len = get_detail(command)
+    command = command[detail_len:]
+    comment_len = get_comment(command)
 
+    # deal with ;
+    if comment_len < len(command):
+        if command[comment_len]==';':
+            comment_len += 1
+        else:
+            utils.eprint("no semicolon between commands")
+            exit()
+
+    cmd = Command.factory(addr1, addr2, op, detail)
+    
+    return addr_len + detail_len+comment_len, cmd
+
+
+def get_addr(command):
+    m = re.search('([0-9]+|/.*?/|\$)?((,)([0-9]+|/.*?/|\$))?', command)
+    # print(m.group(0))
+    if m.group(0) == None:
+        return None, None, 0
+    else:
+        if m.group(2) == None:
+            return m.group(1), None, len(m.group(0))
+        else:
+            return m.group(1), m.group(4), len(m.group(0))
+
+def get_detail(command):
+    invalid = False
+    op = command[0]
+    if op in 'dpq':
+        return None, 1
+    elif op in 'aci':
+        return command[1:], len(command)
+    elif op in 'bt':
+        if (pos := command.find(';')) != -1:
+            return command[1:pos], pos
+        else:
+            return command[1:], len(command)
+    elif op in 's':
+        m = re.search(r'(\S)(.*?)\1(.*?)\1(g?)', command)
+        if m:
+            return command[m.start():m.end()], m.end()
+        invalid = True
+    elif op in '#':
+        return None, len(command)
+    else:
+        invalid = True
+
+    if invalid:
+        utils.eprint("command line: invalid command")
+        exit()
+
+    return None
+
+def get_comment(command):
+    if command[0] == '#':
+        if (pos:= command.find(';')) != -1:
+            return pos
+        else:
+            return len(command)
+    return 0
 
 def main():
     parser, args = parse_argument()
