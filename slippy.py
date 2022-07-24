@@ -28,15 +28,15 @@ def parse_cmd(command):
     addr1, addr2, addr_len = get_addr(command)
     op = command[addr_len]
     command = command[addr_len:]
-    detail, detail_len = get_detail(command)
+    detail, detail_len = get_detail(command, addr_len)
     command = command[detail_len:]
     comment_len = get_comment(command)
-
     # deal with ;
     if comment_len < len(command):
         if command[comment_len]==';':
             comment_len += 1
         else:
+
             utils.eprint("no semicolon between commands")
             exit()
 
@@ -47,7 +47,6 @@ def parse_cmd(command):
 
 def get_addr(command):
     m = re.match('([0-9]+|/.*?/|\$)?((,)([0-9]+|/.*?/|\$))?', command)
-    # print(m.group(0))
     if m.group(0) == None:
         return None, None, 0
     else:
@@ -56,7 +55,7 @@ def get_addr(command):
         else:
             return m.group(1), m.group(4), len(m.group(0))
 
-def get_detail(command):
+def get_detail(command, addr_len):
     invalid = False
     op = command[0]
     if op in 'dpq':
@@ -69,12 +68,19 @@ def get_detail(command):
         else:
             return command[1:], len(command)
     elif op in 's':
-        m = re.search(r'(\S)(.*?)\1(.*?)\1(g?)', command)
+        m = re.match(r'(\S)(.*?)\1(.*?)\1(g?)', command[1:])
         if m:
-            return command[m.start():m.end()], m.end()
+            return command[m.start()+1:m.end()+1], m.end()+1
         invalid = True
     elif op in '#':
         return None, len(command)
+    elif op in ':':
+        if addr_len != 0:
+            invalid = True
+        elif (pos := command.find(';')) != -1:
+            return command[1:pos], pos
+        else:
+            return command[1:], len(command)
     else:
         invalid = True
 
