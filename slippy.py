@@ -109,7 +109,8 @@ def parse_argument():
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument("-f", dest="script_file", metavar='sript-file')
     group.add_argument("sed_command", nargs='?', default=None, metavar='sed-command')
-
+    
+    # FIXME python3 slippy.py -f commands.slippy two.txt five.txt
     parser.add_argument("files", nargs='*', default=sys.stdin)
 
     args = parser.parse_args()
@@ -135,7 +136,7 @@ def main():
                         inputs = inputs + f.read()
                 oldstdin = sys.stdin
                 sys.stdin = StringIO(inputs)
-                print(inputs)
+                # print(inputs)
             except IOError:
                 utils.eprint("No such file or directory!")
 
