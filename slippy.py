@@ -36,6 +36,9 @@ def escape_space(command, i):
     return i
 
 def parse_cmd(command):
+    # FIXME seq 1 5 | python3 -s -S slippy 's/[15]/z\\/z\\/z/'
+    # FIXME seq 1 5 | python3 -s -S slippy 's_[15]_z\\_z\\_z_'
+    # FIXME seq 1 5 | python3 -s -S slippy 's1[\\15]1zzz1'
     addr1, addr2, addr_len = get_addr(command)
     addr_len = escape_space(command, addr_len)
     op = command[addr_len]
@@ -51,8 +54,8 @@ def parse_cmd(command):
         if command[comment_len]==';':
             comment_len += 1
         else:
-            print("slippy: command line: invalid command")
-            exit()
+            utils.eprint("slippy: command line: invalid command")
+            exit(1)
 
     cmd = Command.factory(addr1, addr2, op, detail)
     
@@ -82,10 +85,22 @@ def get_detail(command, op, addr1):
         else:
             return command[0:], len(command)
     elif op in 's':
-        m = re.match(r'(\S)(.*?)\1(.*?)\1(g?)', command[0:])
-        if m:
-            return command[m.start():m.end()], m.end()
-        invalid = True
+        # get regex & replacement string
+        regex, replace, g, i = get_regex_replacement(command)
+        try:
+            re.compile(regex)
+        except re.error:
+            invalid = True
+        res = list()
+        res.append(regex)
+        res.append(replace)
+        res.append(g)
+        return res, i
+        # m = re.match(r'(\S)([^\\]*?)\1(.*?[^\\])\1(g?)', command[0:])
+        # if m:
+        #     return command[m.start():m.end()], m.end()
+        # invalid = True
+
     elif op in '#':
         return None, len(command)
     elif op in ':':
@@ -99,10 +114,35 @@ def get_detail(command, op, addr1):
         invalid = True
 
     if invalid:
-        print("slippy: command line: invalid command")
-        exit()
+        utils.eprint("slippy: command line: invalid command")
+        exit(1)
 
     return None
+
+# FIXME python3 -s -S slippy 's/[15]/z\/z\/z/'
+def get_regex_replacement(command):
+    delimiter = command[0]
+    g = 1
+    i = 1
+    def get_str(command,  i):
+        regex = ""
+        while i < len(command) and command[i] != delimiter:
+            if command[i] == '\\' and i+1 < len(command) and command[i+1] == delimiter:
+                i += 1
+                regex = regex + command[i]
+                i += 1
+            else:
+                regex = regex + command[i]
+                i += 1
+        i += 1
+        return regex, i
+
+    regex, i = get_str(command, i)
+    replace, i = get_str(command, i)
+    if i < len(command) and command[i] == 'g':
+        g = 0
+        i += 1
+    return regex, replace, g, i
 
 def get_comment(command):
     if len(command) == 0:

@@ -89,12 +89,24 @@ class Command_delete(Command):
 
 class Command_substitute(Command):
     def execute(self, vm):
-        m = re.search(r'(\S)(.*?)\1(.*?)\1(g?)', self.detail)
-        regex = m.group(2)
-        replace = m.group(3)
-        g = 0 if m.group(4) else 1
+        # m = re.search(r'(\S)(.*?)\1(.*?)\1(g?)', self.detail)
+        # delimiter = m.group(1)
+        # regex = m.group(2)
+        # replace = m.group(3)
+        # g = 0 if m.group(4) else 1
+        # regex = re.sub('\\\\'+delimiter, delimiter, regex, 0)
+        # replace = re.sub('\\\\'+delimiter, delimiter, replace, 0)
+        # print(regex)
+
+        regex = self.detail[0]
+        replace = r"{}".format(self.detail[1])
+        g = self.detail[2]
+
+        # m = re.search(regex, vm.current_line)
+        # replace = re.sub("", replace)
         
-        subline =  re.sub(regex, replace, vm.current_line, g)
+        subline = re.sub(regex, replace, vm.current_line, g)
+           
         if subline != vm.current_line:
             vm.current_line = subline
             vm.subsuccess = True
