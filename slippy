@@ -36,9 +36,6 @@ def escape_space(command, i):
     return i
 
 def parse_cmd(command):
-    # FIXME seq 1 5 | python3 -s -S slippy 's/[15]/z\\/z\\/z/'
-    # FIXME seq 1 5 | python3 -s -S slippy 's_[15]_z\\_z\\_z_'
-    # FIXME seq 1 5 | python3 -s -S slippy 's1[\\15]1zzz1'
     addr1, addr2, addr_len = get_addr(command)
     addr_len = escape_space(command, addr_len)
     op = command[addr_len]
