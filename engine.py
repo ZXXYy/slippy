@@ -53,7 +53,7 @@ class VM:
                 # print(self.pc)
                 cmd = self.cmds[self.pc]
                 executed = cmd.execute_cmd(self)
-                if executed and isinstance(cmd, Command_quit):
+                if executed and isinstance(cmd, Command_quit) and self.current_line:
                     quited = True
                     break
                 self.pc += 1
@@ -68,6 +68,3 @@ class VM:
             self.current_line = self.next_line
             self.lineno += 1
             self.pc = 0
-
-        
-        

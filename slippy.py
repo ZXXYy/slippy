@@ -105,10 +105,11 @@ def parse_argument():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", action="store_true", dest="overwrite")
     parser.add_argument("-n", action="store_true", dest="noprint")
+    
 
-    group = parser.add_mutually_exclusive_group(required=False)
-    group.add_argument("-f", dest="script_file", metavar='sript-file')
-    group.add_argument("sed_command", nargs='?', default=None, metavar='sed-command')
+    group = parser.add_argument_group()
+    group.add_argument("-f", dest="script_file", metavar='<sript-file>')
+    group.add_argument("sed_command", nargs='?', default=None, metavar='<sed-command>')
     
     # FIXME python3 slippy.py -f commands.slippy two.txt five.txt
     parser.add_argument("files", nargs='*', default=sys.stdin)
@@ -119,13 +120,17 @@ def parse_argument():
 def main():
     parser, args = parse_argument()
 
-    sed_commands = args.sed_command
+    
     if args.script_file:
         try:
             with open(args.script_file, 'r') as f:
                 sed_commands = f.read()
         except IOError:
             utils.eprint("No such file or directory!")
+        if args.sed_command:
+            args.files.insert(0, args.sed_command)
+    else:
+        sed_commands = args.sed_command
 
     if args.files:
         if not (args.files is sys.stdin):
@@ -146,22 +151,6 @@ def main():
     slippy = VM(args.overwrite, args.noprint, cmds, sys.stdin)
     slippy.run()
 
-    # res = list()
-    # if not sys.stdin.isatty():
-    #     if noprint:
-    #         res = process_command(noprint, True)
-    #     else:
-    #         commands = commands.strip()
-            
-    #         commands = re.split(';|\n', commands)
-    #         for i, command in enumerate(commands):
-    #             if pos := command.find("#") != -1:
-    #                 command = command[:pos]
-    #             if i != len(commands)-1:
-    #                 process_command(command, False)
-    #             else:
-    #                 process_command(command, False)
-    
-    # display(res)
+
 if __name__ == "__main__":
     main()
