@@ -2,6 +2,7 @@
 
 import re
 import sys
+from sys import exit
 import os
 import argparse
 from io import StringIO
@@ -12,10 +13,12 @@ import utils
 
 def preprocess_commands(commands):
     cmds = list()
-    commands = commands.replace(' ', '')
+    # commands = commands.replace(' ', '')
+    commands = commands.strip()
     lines = commands.split('\n')
     for line in lines:
         while len(line) > 0:
+            line = line.strip()
             i, cmd = parse_cmd(line)
             if cmd:
                 cmds.append(cmd)
@@ -24,21 +27,31 @@ def preprocess_commands(commands):
     # for cmd in cmds:
     #     print(str(cmd))
     return cmds
+def escape_space(command, i):
+    while i < len(command):
+        if command[i] == ' ':
+            i += 1
+        else:
+            break
+    return i
 
 def parse_cmd(command):
     addr1, addr2, addr_len = get_addr(command)
+    addr_len = escape_space(command, addr_len)
     op = command[addr_len]
+    addr_len = escape_space(command, addr_len+1)
     command = command[addr_len:]
-    detail, detail_len = get_detail(command, addr_len)
+    detail, detail_len = get_detail(command, op, addr1)
+    detail_len = escape_space(command, detail_len)
     command = command[detail_len:]
+
     comment_len = get_comment(command)
     # deal with ;
     if comment_len < len(command):
         if command[comment_len]==';':
             comment_len += 1
         else:
-
-            utils.eprint("no semicolon between commands")
+            print("slippy: command line: invalid command")
             exit()
 
     cmd = Command.factory(addr1, addr2, op, detail)
@@ -47,7 +60,7 @@ def parse_cmd(command):
 
 
 def get_addr(command):
-    m = re.match('([0-9]+|/.*?/|\$)?((,)([0-9]+|/.*?/|\$))?', command)
+    m = re.match('([0-9]+|/.*?/|\$)?((\s*,\s*)([0-9]+|/.*?/|\$))?', command)
     if m.group(0) == None:
         return None, None, 0
     else:
@@ -56,37 +69,37 @@ def get_addr(command):
         else:
             return m.group(1), m.group(4), len(m.group(0))
 
-def get_detail(command, addr_len):
+def get_detail(command, op, addr1):
     invalid = False
-    op = command[0]
+    # op = command[0]
     if op in 'dpq':
-        return None, 1
+        return None, 0
     elif op in 'aci':
-        return command[1:], len(command)
+        return command[0:], len(command)
     elif op in 'bt':
         if (pos := command.find(';')) != -1:
-            return command[1:pos], pos
+            return command[0:pos], pos
         else:
-            return command[1:], len(command)
+            return command[0:], len(command)
     elif op in 's':
-        m = re.match(r'(\S)(.*?)\1(.*?)\1(g?)', command[1:])
+        m = re.match(r'(\S)(.*?)\1(.*?)\1(g?)', command[0:])
         if m:
-            return command[m.start()+1:m.end()+1], m.end()+1
+            return command[m.start():m.end()], m.end()
         invalid = True
     elif op in '#':
         return None, len(command)
     elif op in ':':
-        if addr_len != 0:
+        if addr1 is not None:
             invalid = True
         elif (pos := command.find(';')) != -1:
-            return command[1:pos], pos
+            return command[0:pos], pos
         else:
-            return command[1:], len(command)
+            return command[0:], len(command)
     else:
         invalid = True
 
     if invalid:
-        utils.eprint("command line: invalid command")
+        print("slippy: command line: invalid command")
         exit()
 
     return None
