@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import re
+import sys
 
 from Cmd import Command_label, Command_quit
 
@@ -7,6 +8,8 @@ class VM:
     def __init__(self, overwrite, noprint, cmds, input) -> None:
         self.noprint = noprint
         self.overwrite = overwrite
+        if overwrite:
+            self.output = open("temp", "w")
         self.cmds = cmds
         self.input = input
         self.subsuccess = False
@@ -30,7 +33,10 @@ class VM:
 
     def printline(self):
         if self.current_line:
-            print(self.current_line, end="")
+            if self.overwrite:
+                self.output.write(self.current_line)
+            else:
+                print(self.current_line, end="")
 
     def form_symtable(self):
         self.pc = 0

@@ -2,6 +2,7 @@
 
 import re
 import sys
+import os
 import argparse
 from io import StringIO
 
@@ -110,7 +111,7 @@ def parse_argument():
     group = parser.add_argument_group()
     group.add_argument("-f", dest="script_file", metavar='<sript-file>')
     group.add_argument("sed_command", nargs='?', default=None, metavar='<sed-command>')
-    
+
     # FIXME python3 slippy.py -f commands.slippy two.txt five.txt
     parser.add_argument("files", nargs='*', default=sys.stdin)
 
@@ -119,8 +120,6 @@ def parse_argument():
 
 def main():
     parser, args = parse_argument()
-
-    
     if args.script_file:
         try:
             with open(args.script_file, 'r') as f:
@@ -128,29 +127,52 @@ def main():
         except IOError:
             utils.eprint("No such file or directory!")
         if args.sed_command:
-            args.files.insert(0, args.sed_command)
+            if args.files is sys.stdin:
+                args.files = [args.sed_command]
+            else:
+                args.files.insert(0, args.sed_command)
     else:
         sed_commands = args.sed_command
-
-    if args.files:
-        if not (args.files is sys.stdin):
-            inputs = ""
-            try:
-                for file in args.files:
-                    with open(file, 'r') as f:
-                        inputs = inputs + f.read()
-                oldstdin = sys.stdin
-                sys.stdin = StringIO(inputs)
-                # print(inputs)
-            except IOError:
-                utils.eprint("No such file or directory!")
 
     # preprocessing sed commands
     cmds = preprocess_commands(sed_commands)
 
-    slippy = VM(args.overwrite, args.noprint, cmds, sys.stdin)
-    slippy.run()
+    if args.files:
+        if not args.overwrite:
+            oldstdin = sys.stdin
+            if not (args.files is sys.stdin):
+                inputs = ""
+                try:
+                    for file in args.files:
+                        with open(file, 'r') as f:
+                            inputs = inputs + f.read()
+                    sys.stdin = StringIO(inputs)
+                    # print(inputs)
+                except IOError:
+                    utils.eprint("No such file or directory!")
+                
+            slippy = VM(args.overwrite, args.noprint, cmds, sys.stdin)
+            slippy.run()
+            sys.stdin = oldstdin
+        else:
+            oldstdin = sys.stdin
+            for file in args.files:
+                with open(file, 'r') as f:
+                    sys.stdin = StringIO(f.read())
+                slippy = VM(args.overwrite, args.noprint, cmds, sys.stdin)
+                slippy.run()
+                slippy.output.close()
+                with open('temp', 'r') as src:
+                    contents = src.read()
 
+                with open(args.files[0], 'w') as dst:
+                    dst.write(contents)
+                os.remove('temp')
+   
+
+    # slippy = VM(args.overwrite, args.noprint, cmds, sys.stdin)
+    # slippy.run()
+    # sys.stdin = oldstdin
 
 if __name__ == "__main__":
     main()
