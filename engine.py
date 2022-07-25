@@ -48,6 +48,8 @@ class VM:
     def run(self):
         self.form_symtable()
         self.current_line = self.input.readline()
+        if self.current_line[-1] != '\n':
+            self.current_line += '\n'
         self.lineno = 1
         self.pc = 0
         quited = False
@@ -72,5 +74,7 @@ class VM:
                 break
 
             self.current_line = self.next_line
+            if self.current_line and self.current_line[-1] != '\n':
+                self.current_line += '\n'
             self.lineno += 1
             self.pc = 0
